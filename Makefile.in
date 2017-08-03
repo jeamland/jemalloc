@@ -115,6 +115,7 @@ C_SRCS := $(srcroot)src/jemalloc.c \
 	$(srcroot)src/spin.c \
 	$(srcroot)src/sz.c \
 	$(srcroot)src/tcache.c \
+	$(srcroot)src/testing.c \
 	$(srcroot)src/ticker.c \
 	$(srcroot)src/tsd.c \
 	$(srcroot)src/witness.c

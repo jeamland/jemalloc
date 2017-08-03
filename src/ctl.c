@@ -9,6 +9,7 @@
 #include "jemalloc/internal/mutex.h"
 #include "jemalloc/internal/nstime.h"
 #include "jemalloc/internal/size_classes.h"
+#include "jemalloc/internal/testing.h"
 #include "jemalloc/internal/util.h"
 
 /******************************************************************************/
@@ -194,6 +195,7 @@ CTL_PROTO(stats_metadata)
 CTL_PROTO(stats_resident)
 CTL_PROTO(stats_mapped)
 CTL_PROTO(stats_retained)
+CTL_PROTO(testing_malloc_fail)
 
 #define MUTEX_STATS_CTL_PROTO_GEN(n)					\
 CTL_PROTO(stats_##n##_num_ops)						\
@@ -521,6 +523,10 @@ static const ctl_named_node_t stats_node[] = {
 	{NAME("arenas"),	CHILD(indexed, stats_arenas)}
 };
 
+static const ctl_named_node_t	testing_node[] = {
+	{NAME("malloc_fail"),	CTL(testing_malloc_fail)}
+};
+
 static const ctl_named_node_t	root_node[] = {
 	{NAME("version"),	CTL(version)},
 	{NAME("epoch"),		CTL(epoch)},
@@ -532,7 +538,8 @@ static const ctl_named_node_t	root_node[] = {
 	{NAME("arena"),		CHILD(indexed, arena)},
 	{NAME("arenas"),	CHILD(named, arenas)},
 	{NAME("prof"),		CHILD(named, prof)},
-	{NAME("stats"),		CHILD(named, stats)}
+	{NAME("stats"),		CHILD(named, stats)},
+	{NAME("testing"),	CHILD(named, testing)}
 };
 static const ctl_named_node_t super_root_node[] = {
 	{NAME(""),		CHILD(named, root)}
@@ -2694,5 +2701,27 @@ stats_arenas_i_index(tsdn_t *tsdn, const size_t *mib, size_t miblen, size_t i) {
 	ret = super_stats_arenas_i_node;
 label_return:
 	malloc_mutex_unlock(tsdn, &ctl_mtx);
+	return ret;
+}
+
+static int
+testing_malloc_fail_ctl(tsd_t *tsd, const size_t *mib, size_t miblen,
+    void *oldp, size_t *oldlenp, void *newp, size_t newlen) {
+	int ret;
+	int oldval;
+
+	if (newp != NULL) {
+		if (newlen != sizeof(int)) {
+			ret = EINVAL;
+			goto label_return;
+		}
+		oldval = testing_malloc_fail_set(tsd_tsdn(tsd), *(int *)newp);
+	} else {
+		oldval = testing_malloc_fail_get(tsd_tsdn(tsd));
+	}
+	READ(oldval, int);
+
+	ret = 0;
+label_return:
 	return ret;
 }

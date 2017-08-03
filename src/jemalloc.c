@@ -15,6 +15,7 @@
 #include "jemalloc/internal/size_classes.h"
 #include "jemalloc/internal/spin.h"
 #include "jemalloc/internal/sz.h"
+#include "jemalloc/internal/testing.h"
 #include "jemalloc/internal/ticker.h"
 #include "jemalloc/internal/util.h"
 
@@ -1975,6 +1976,15 @@ je_malloc(size_t size) {
 	dynamic_opts_t dopts;
 
 	log("core.malloc.entry", "size: %zu", size);
+
+	/*
+	 * This is a lockless read but we care more about normal case
+	 * performance than the thread-safety of testing code.
+	 */
+	if (unlikely(testing_malloc_fail)) {
+		set_errno(testing_malloc_fail_get_and_clear(tsdn_fetch()));
+		return NULL;
+	}
 
 	static_opts_init(&sopts);
 	dynamic_opts_init(&dopts);
